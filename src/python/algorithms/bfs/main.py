@@ -33,7 +33,7 @@ Nós
 #FILE_NAME = "/usr/local/share/master-ipr/map1/map1.csv" # Linux-style absolute path
 #FILE_NAME = "C:\\Users\\USER_NAME\\Downloads\\master-ipr\\map1\\map1.csv" # Windows-style absolute path, note the `\\` and edit `USER_NAME`
 #FILE_NAME = "../../../../map1/map1.csv" # Linux-style relative path
-FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map1\\map1.csv" # Windows-style relative path, note the `\\`
+FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map2\\map2.csv" # Windows-style relative path, note the `\\`
 
 # # Define Node class (A nivel grafo/nodo)
 
@@ -103,8 +103,10 @@ while not datos_meta:
         print("La coordenada X de la meta esta fuera del rango del mapa")
     elif (END_Y < 0 or END_Y > num_columnas ):
         print("La coordenada Y de la meta esta fuera del rango del mapa")
-    elif (charMap[END_X][END_X] == '1'): # celda ocupada
+    elif (charMap[END_X][END_Y] == '1'): # celda ocupada
         print("El punto de meta coincide con un muro")
+    elif ([END_X, END_Y] == [START_X, START_Y]): # celda de partida = celda de meta
+        print("El punto de meta no puede coincidir con el de partida")
     else:
         datos_meta = 1
 
@@ -178,12 +180,12 @@ while not done:
     for movimiento in movimientos_disponibles:
         tmpX, tmpY = movimiento
         if( charMap[tmpX][tmpY] == '4' ):
-            print("up: GOALLLL!!!")
+            print("GOALLLL!!!")
             goalParentId = node.myId  # aquí sustituye por real
             done = True
             break
         elif ( charMap[tmpX][tmpY] == '0' ):
-            print("up: mark visited")
+            print("mark visited")
             newNode = Node(tmpX, tmpY, len(nodes), node.myId)
             charMap[tmpX][tmpY] = '2'
             nodes.append(newNode)
