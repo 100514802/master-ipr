@@ -33,7 +33,7 @@ Nós
 #FILE_NAME = "/usr/local/share/master-ipr/map1/map1.csv" # Linux-style absolute path
 #FILE_NAME = "C:\\Users\\USER_NAME\\Downloads\\master-ipr\\map1\\map1.csv" # Windows-style absolute path, note the `\\` and edit `USER_NAME`
 #FILE_NAME = "../../../../map1/map1.csv" # Linux-style relative path
-FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map2\\map2.csv" # Windows-style relative path, note the `\\`
+FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map1\\map1.csv" # Windows-style relative path, note the `\\`
 
 # # Define Node class (A nivel grafo/nodo)
 
@@ -292,13 +292,27 @@ while not done:
 
 # ## Display solución hallada
 
+import pandas as pd
+
+# Convierte charMap en un DataFrame de pandas
+mapa = pd.DataFrame(charMap)
+output_csv = "mapa_resultado.csv"  # Nombre del archivo CSV de salida
+mapa[mapa==1] = 5
+
 print("%%%%%%%%%%%%%%%%%%%")
 ok = False
 while not ok:
     for node in nodes:
         if( node.myId == goalParentId ):
             node.dump()
+            mapa.at[node.x, node.y] = node.myId
             goalParentId = node.parentId
             if( goalParentId == -2):
                 print("%%%%%%%%%%%%%%%%%2")
                 ok = True
+
+
+
+# Guarda el DataFrame en un archivo CSV
+mapa.to_csv(output_csv, index=False, header=False)
+print("Mapa final guardado en", output_csv)

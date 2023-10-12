@@ -13,3 +13,4 @@ The following is recommended if working with a Virtual Machine:
 - For the machines to be able to see each other, use VirtualBox `Bridged adapter`, and set the virtual machine's IP within the machine.
 
 ## Intructions 
+Para sacar los datos en un csv es necesario tener la biblioteca 'pandas'. 
