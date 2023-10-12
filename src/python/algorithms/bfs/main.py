@@ -94,9 +94,21 @@ while not datos_partida:
     else:
         datos_partida = 1
 
-END_X = int(input("Ingrese la coordenada X de la meta: "))
+datos_meta = 0 # pongo la variable a uno cuando los datos son validos
 
-END_Y = int(input("Ingrese la coordenada Y de la meta: "))
+while not datos_meta:
+    END_X = int(input("Ingrese la coordenada X de la meta: "))
+    END_Y = int(input("Ingrese la coordenada Y de la meta: "))
+    if (END_X < 0 or END_X > num_filas ):
+        print("La coordenada X de la meta esta fuera del rango del mapa")
+    elif (END_Y < 0 or END_Y > num_columnas ):
+        print("La coordenada Y de la meta esta fuera del rango del mapa")
+    elif (charMap[END_X][END_X] == '1'): # celda ocupada
+        print("El punto de meta coincide con un muro")
+    else:
+        datos_meta = 1
+
+
 
 # ## A nivel mapa, integramos la info que teníamos de start & end
 
