@@ -35,6 +35,10 @@ Nós
 #FILE_NAME = "../../../../map1/map1.csv" # Linux-style relative path
 FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map1\\map1.csv" # Windows-style relative path, note the `\\`
 
+# # Empleo la libreria time para medir tiempo de ejecucion, pandas para sacar datos en un archivo csv
+import time
+import pandas as pd
+
 # # Define Node class (A nivel grafo/nodo)
 
 class Node:
@@ -61,8 +65,15 @@ def dumpMap():
     for line in charMap:
         print(line)
 
-# ## De fichero, llenar estructura de datos de fichero (`to parse`/`parsing``) para mapa
+# ## Creo una función que me permita limpiar el mapa antes de buscar la meta con un algoritmo de busqueda
+def resetCharMap(charMap):
+    for i in range(len(charMap)): # Genero un bucle que me compruebe todas las celdas
+        for j in range(len(charMap[i])):
+            if charMap[i][j] == '2': # Debo cambiar aquellas celdas que han sido visitadas
+                charMap[i][j] = '0'  # Restaura celdas visitadas a su estado original
+    return charMap
 
+# ## De fichero, llenar estructura de datos de fichero (`to parse`/`parsing``) para mapa
 with open(FILE_NAME) as f:
     line = f.readline()
     while line:
@@ -71,7 +82,6 @@ with open(FILE_NAME) as f:
         line = f.readline()
 
 # ## Ahora vamos a ver cual es la dimension del mapa cargado
-
 num_filas = len(charMap)
 
 if num_filas > 0:
@@ -82,7 +92,7 @@ else:
 # ## Pido por terminal los puntos de partida y de meta:
 datos_partida = 0 # pongo la variable a uno cuando los datos son validos
 
-while not datos_partida:
+while not datos_partida: #Mediante este bucle me aseguro de que el punto de partida sea válido
     START_X = int(input("Ingrese la coordenada X de partida: ")) - 1
     START_Y = int(input("Ingrese la coordenada Y de partida: ")) - 1
     if (START_X < 0 or START_X > num_filas ):
@@ -96,7 +106,7 @@ while not datos_partida:
 
 datos_meta = 0 # pongo la variable a uno cuando los datos son validos
 
-while not datos_meta:
+while not datos_meta: #Mediante este bucle me aseguro de que el punto de partida sea válido
     END_X = int(input("Ingrese la coordenada X de la meta: "))
     END_Y = int(input("Ingrese la coordenada Y de la meta: "))
     if (END_X < 0 or END_X > num_filas ):
@@ -127,192 +137,234 @@ dumpMap()
 init = Node(START_X, START_Y, 0, -2)
 # init.dump() # comprobar que primer nodo bien
 
-# ## `nodes` contendrá los nodos del grafo
+# ## Voy a tener dos funciones distintas, una greedy y una exhaustiva, de modo que pueda comparar los tiempos de ejecución de cada una
+def greedy(charMap, init):
+    inicio = time.time() #inicializo el contador de tiempo
+    charMap = resetCharMap(charMap)
+    # ## `nodes` contendrá los nodos del grafo
 
-nodes = []
+    nodes = []
 
-# ## Añadimos el primer nodo a `nodes`
+    # ## Añadimos el primer nodo a `nodes`
 
-nodes.append(init)
+    nodes.append(init)
 
-# ##Creo una variable nodo en la que vamos guardando el nodo visitado
-newNode = init
+    # ##Creo una variable nodo en la que vamos guardando el nodo visitado
+    newNode = init
 
+    done = False  # clásica condición de parada del bucle `while`
+    goalParentId = -1  # -1: parentId del nodo goal PROVISIONAL cuando aun no se ha resuelto
 
-# ## Empieza algoritmo
+    while not done:
+        print("--------------------- number of nodes: "+str(len(nodes)))
 
-done = False  # clásica condición de parada del bucle `while`
-goalParentId = -1  # -1: parentId del nodo goal PROVISIONAL cuando aun no se ha resuelto
-
-# BORRAR mode = 1 #Tenemos cuatro modos de desplazamiento (uno por cada dirección)
-
-while not done:
-    print("--------------------- number of nodes: "+str(len(nodes)))
-    
-    #Actualizamos el nodo
-    node = newNode
-    
-    #Creamos un array con los tipos de movimientos que pueden realizarse
-    movimientos_disponibles = [
-    (node.x - 1, node.y), # Arriba
-    (node.x , node.y - 1), # Izquierda
-    (node.x + 1, node.y), # Abajo
-    (node.x, node.y + 1), # Derecha
-    (node.x - 1, node.y - 1), # Diagonal sup izq
-    (node.x - 1, node.y + 1), # Diagonal sup dcha
-    (node.x + 1, node.y - 1), # Diagonal inf izq
-    (node.x + 1, node.y + 1) # Diagonal inf dcha
-    ]
-    
-    #Creo una función que pueda calcular la distancia hasta la meta
-    def distancia(movimiento):
-        return abs(movimiento[0] - END_X) + abs(movimiento[1] - END_Y)
-    
-    #A partir de la distancia a la meta ordenamos los movimientos
-    movimientos_disponibles.sort(key=distancia)
-
-    
-    #Creo una variable en la que almaceno un contaje de las direcciones en las que no debe/puede moverse,
-    #cuando esta variable llega a ocho me indica que debemos retroceder
-    direccion_bloqueada = 0
-    
-    #El siguiente bucle va probando los movimientos según el orden de la lista
-    for movimiento in movimientos_disponibles:
-        tmpX, tmpY = movimiento
-        if( charMap[tmpX][tmpY] == '4' ):
-            print("GOALLLL!!!")
-            goalParentId = node.myId  # aquí sustituye por real
-            done = True
-            break
-        elif ( charMap[tmpX][tmpY] == '0' ):
-            print("mark visited")
-            newNode = Node(tmpX, tmpY, len(nodes), node.myId)
-            charMap[tmpX][tmpY] = '2'
-            nodes.append(newNode)
-            break
-        elif ( charMap[tmpX][tmpY] == '2'): # cuando ya hemos pasado por la celda debemos aumentar el contador
-            print("Casilla visitada")
-            direccion_bloqueada += 1
-            if (direccion_bloqueada == 8): # si ya hemos pasado por todas las celdas de alrededor debemos volver al punto anterior
-                for a in nodes:
-                    if ( a.myId == node.parentId ): # cuando el ID del nodo coincide con el parentID, hemos encontrado el anterior
-                        newNode = a
-                        break             
-    dumpMap()    
-
-    """
-    if mode == 1:
-        node = newNode #actualizo el valor del nodo con el que vamos a trabajar
-        node.dump()
-
-        # up
-        tmpX = node.x - 1
-        tmpY = node.y
-        if( charMap[tmpX][tmpY] == '4' ):
-            print("up: GOALLLL!!!")
-            goalParentId = node.myId  # aquí sustituye por real
-            done = True
-            break
-        elif ( charMap[tmpX][tmpY] == '0' ):
-            print("up: mark visited")
-            newNode = Node(tmpX, tmpY, len(nodes), node.myId)
-            charMap[tmpX][tmpY] = '2'
-            nodes.append(newNode)
-        elif ( charMap[tmpX][tmpY] == '1' or  charMap[tmpX][tmpY] == '2'): # avanzo en la misma direccion hasta chocar con un muro
-            print("up: wall found")
-            mode = 2
-        
-        dumpMap()
-            
-    if mode == 2:
+        #Actualizamos el nodo
         node = newNode
-        node.dump()
-        # right
-        tmpX = node.x
-        tmpY = node.y + 1
-        if( charMap[tmpX][tmpY] == '4' ):
-            print("right: GOALLLL!!!")
-            goalParentId = node.myId # aquí sustituye por real
-            done = True
-            break
-        elif ( charMap[tmpX][tmpY] == '0' ):
-            print("right    : mark visited")
-            newNode = Node(tmpX, tmpY, len(nodes), node.myId)
-            charMap[tmpX][tmpY] = '2'
-            nodes.append(newNode)
-        elif ( charMap[tmpX][tmpY] == '1' or  charMap[tmpX][tmpY] == '2'):
-            print("right: wall found")
-            mode = 3
 
-        dumpMap()
+        #Creamos un array con los tipos de movimientos que pueden realizarse
+        movimientos_disponibles = [
+        (node.x - 1, node.y), # Arriba
+        (node.x , node.y - 1), # Izquierda
+        (node.x + 1, node.y), # Abajo
+        (node.x, node.y + 1), # Derecha
+        (node.x - 1, node.y - 1), # Diagonal sup izq
+        (node.x - 1, node.y + 1), # Diagonal sup dcha
+        (node.x + 1, node.y - 1), # Diagonal inf izq
+        (node.x + 1, node.y + 1) # Diagonal inf dcha
+        ]
 
-    if mode == 3:
-        node = newNode
-        node.dump()
-        # down
-        tmpX = node.x + 1
-        tmpY = node.y
-        if( charMap[tmpX][tmpY] == '4' ):
-            print("down: GOALLLL!!!")
-            goalParentId = node.myId # aquí sustituye por real
-            done = True
-            break
-        elif ( charMap[tmpX][tmpY] == '0' ):
-            print("down: mark visited")
-            newNode = Node(tmpX, tmpY, len(nodes), node.myId)
-            charMap[tmpX][tmpY] = '2'
-            nodes.append(newNode)
-        elif ( charMap[tmpX][tmpY] == '1' or  charMap[tmpX][tmpY] == '2'):
-            print("down: wall found")
-            mode = 4
-        dumpMap()
-        
-        
-    if mode == 4:
-        node = newNode
-        node.dump()
-        # left
-        tmpX = node.x
-        tmpY = node.y - 1
-        if( charMap[tmpX][tmpY] == '4' ):
-            print("left: GOALLLL!!!")
-            goalParentId = node.myId # aquí sustituye por real
-            done = True
-            break
-        elif ( charMap[tmpX][tmpY] == '0' ):
-            print("left: mark visited")
-            newNode = Node(tmpX, tmpY, len(nodes), node.myId)
-            charMap[tmpX][tmpY] = '2'
-            nodes.append(newNode)
-        elif ( charMap[tmpX][tmpY] == '1' or  charMap[tmpX][tmpY] == '2'):
-            print("left: wall found")
-            mode = 1
-        dumpMap()
-"""
+        #Creo una función que pueda calcular la distancia hasta la meta
+        def distancia(movimiento):
+            return abs(movimiento[0] - END_X) + abs(movimiento[1] - END_Y)
 
-# ## Display solución hallada
+        #A partir de la distancia a la meta ordenamos los movimientos
+        movimientos_disponibles.sort(key=distancia)
 
-import pandas as pd
 
-# Convierte charMap en un DataFrame de pandas
-mapa = pd.DataFrame(charMap)
-output_csv = "mapa_resultado.csv"  # Nombre del archivo CSV de salida
-mapa[mapa==1] = 5
+        #Creo una variable en la que almaceno un contaje de las direcciones en las que no debe/puede moverse,
+        #cuando esta variable llega a ocho me indica que debemos retroceder
+        direccion_bloqueada = 0
 
-print("%%%%%%%%%%%%%%%%%%%")
-ok = False
-while not ok:
-    for node in nodes:
-        if( node.myId == goalParentId ):
+        #El siguiente bucle va probando los movimientos según el orden de la lista
+        for movimiento in movimientos_disponibles:
+            tmpX, tmpY = movimiento
+            if( charMap[tmpX][tmpY] == '4' ):
+                print("GOALLLL!!!")
+                goalParentId = node.myId  # aquí sustituye por real
+                fin = time.time() # finalizo el contador
+                duracion = fin - inicio # calculo el tiempo transcurrido en la ejecucion 
+                done = True
+                break
+            elif ( charMap[tmpX][tmpY] == '0' ):
+                print("mark visited")
+                newNode = Node(tmpX, tmpY, len(nodes), node.myId)
+                charMap[tmpX][tmpY] = '2'
+                nodes.append(newNode)
+                break
+            elif ( charMap[tmpX][tmpY] == '2'): # cuando ya hemos pasado por la celda debemos aumentar el contador
+                print("Casilla visitada")
+                direccion_bloqueada += 1
+                if (direccion_bloqueada == 8): # si ya hemos pasado por todas las celdas de alrededor debemos volver al punto anterior
+                    for a in nodes:
+                        if ( a.myId == node.parentId ): # cuando el ID del nodo coincide con el parentID, hemos encontrado el anterior
+                            newNode = a
+                            break             
+        dumpMap()  
+
+    # ## Display solución hallada
+    # Convierte charMap en un DataFrame de pandas
+    mapa = pd.DataFrame(charMap)
+    mapa = mapa.replace('1', 'X') # Sustituyo los muros por una X, asi no hay confusión entre un muro y el primer nodo visitado
+    mapa = mapa.replace('4', 'G') # La meta la señalizo con G (goal)
+    output_csv = "mapa_resultado_greedy.csv"  # Nombre del archivo CSV de salida
+    
+    nodos_visitados = []
+
+    print("%%%%%%%%%%%%%%%%%%%")
+    ok = False
+    while not ok:
+        for node in nodes:
+            if( node.myId == goalParentId ):
+                node.dump()
+                nodos_visitados.append([node.x, node.y, node.myId, node.parentId])
+                mapa.at[node.x, node.y] = node.myId
+                goalParentId = node.parentId
+
+                if( goalParentId == -2):
+                    print("%%%%%%%%%%%%%%%%%")
+                    ok = True
+
+    # Crear un DataFrame con los datos
+    nodos_visitados.reverse()
+    data_nodos = {
+        "X": [var[0] for var in nodos_visitados],
+        "Y": [var[1] for var in nodos_visitados],
+        "ID": [var[2] for var in nodos_visitados],
+        "ParentID": [var[3] for var in nodos_visitados]
+    }
+
+    df_nodos = pd.DataFrame(data_nodos)
+    # Especifica la ruta del archivo Excel de salida
+    excel_file = "AlgoritmosBusqueda.xlsx"
+
+    # Guarda el DataFrame en un archivo Excel
+    df_nodos.to_excel(excel_file, index=False)
+
+    # Guarda el DataFrame en un archivo CSV
+    mapa.to_csv(output_csv, index=False, header=False)
+    print("Mapa final guardado en", output_csv)  
+
+    # ## Devuelvo el valor del tiempo transcurrido
+    return duracion
+
+def bfs(charMap, init):
+    # ## Empieza algoritmo
+    inicio = time.time() #inicializo el contador
+
+    charMap = resetCharMap(charMap)
+    # ## `nodes` contendrá los nodos del grafo
+
+    nodes = []
+    
+    # ## Añadimos el primer nodo a `nodes`
+    
+    nodes.append(init)
+    
+    # ##Creo una variable nodo en la que vamos guardando el nodo visitado
+    newNode = init
+
+    done = False  # clásica condición de parada del bucle `while`
+    goalParentId = -1  # -1: parentId del nodo goal PROVISIONAL cuando aun no se ha resuelto
+
+    while not done:
+        print("--------------------- number of nodes: "+str(len(nodes)))
+        for node in nodes:
             node.dump()
-            mapa.at[node.x, node.y] = node.myId
-            goalParentId = node.parentId
-            if( goalParentId == -2):
-                print("%%%%%%%%%%%%%%%%%2")
-                ok = True
+
+            # up
+            tmpX = node.x - 1
+            tmpY = node.y
+            if( charMap[tmpX][tmpY] == '4' ):
+                print("up: GOALLLL!!!")
+                goalParentId = node.myId  # aquí sustituye por real
+                fin = time.time() # finalizo el contador
+                duracion = fin - inicio # calculo el tiempo transcurrido en la ejecucion
+                done = True
+                break
+            elif ( charMap[tmpX][tmpY] == '0' ):
+                print("up: mark visited")
+                newNode = Node(tmpX, tmpY, len(nodes), node.myId)
+                charMap[tmpX][tmpY] = '2'
+                nodes.append(newNode)
+
+            # down
+            tmpX = node.x + 1
+            tmpY = node.y
+            if( charMap[tmpX][tmpY] == '4' ):
+                print("down: GOALLLL!!!")
+                goalParentId = node.myId # aquí sustituye por real
+                fin = time.time() # finalizo el contador
+                duracion = fin - inicio # calculo el tiempo transcurrido en la ejecucion
+                done = True
+                break
+            elif ( charMap[tmpX][tmpY] == '0' ):
+                print("down: mark visited")
+                newNode = Node(tmpX, tmpY, len(nodes), node.myId)
+                charMap[tmpX][tmpY] = '2'
+                nodes.append(newNode)
+
+            # right
+            tmpX = node.x
+            tmpY = node.y + 1
+            if( charMap[tmpX][tmpY] == '4' ):
+                print("right: GOALLLL!!!")
+                goalParentId = node.myId # aquí sustituye por real
+                fin = time.time() # finalizo el contador
+                duracion = fin - inicio # calculo el tiempo transcurrido en la ejecucion
+                done = True
+                break
+            elif ( charMap[tmpX][tmpY] == '0' ):
+                print("right    : mark visited")
+                newNode = Node(tmpX, tmpY, len(nodes), node.myId)
+                charMap[tmpX][tmpY] = '2'
+                nodes.append(newNode)
+
+            # left
+            tmpX = node.x
+            tmpY = node.y - 1
+            if( charMap[tmpX][tmpY] == '4' ):
+                print("left: GOALLLL!!!")
+                goalParentId = node.myId # aquí sustituye por real
+                fin = time.time() # finalizo el contador
+                duracion = fin - inicio # calculo el tiempo transcurrido en la ejecucion
+                done = True
+                break
+            elif ( charMap[tmpX][tmpY] == '0' ):
+                print("left: mark visited")
+                newNode = Node(tmpX, tmpY, len(nodes), node.myId)
+                charMap[tmpX][tmpY] = '2'
+                nodes.append(newNode)
+
+            dumpMap()
+
+    # ## Display solución hallada 
+    print("%%%%%%%%%%%%%%%%%%%")
+    ok = False
+    while not ok:
+        for node in nodes:
+            if( node.myId == goalParentId ):
+                node.dump()
+                goalParentId = node.parentId
+                if( goalParentId == -2):
+                    print("%%%%%%%%%%%%%%%%%")
+                    ok = True
+
+    # ## Devuelvo el valor del tiempo transcurrido
+    return duracion
 
 
+duracion_bfs = bfs(charMap, init)
+duracion_greedy = greedy(charMap, init)
 
-# Guarda el DataFrame en un archivo CSV
-mapa.to_csv(output_csv, index=False, header=False)
-print("Mapa final guardado en", output_csv)
+print(f"El tiempo con funcion bfs es de: {duracion_bfs:.3f} segundos\n")
+print(f"El tiempo con funcion greedy es de: {duracion_greedy:.3f} segundos\n")
