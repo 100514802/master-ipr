@@ -33,7 +33,7 @@ Nós
 #FILE_NAME = "/usr/local/share/master-ipr/map1/map1.csv" # Linux-style absolute path
 #FILE_NAME = "C:\\Users\\USER_NAME\\Downloads\\master-ipr\\map1\\map1.csv" # Windows-style absolute path, note the `\\` and edit `USER_NAME`
 #FILE_NAME = "../../../../map1/map1.csv" # Linux-style relative path
-FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map1\\map1.csv" # Windows-style relative path, note the `\\`
+FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map5\\map5.csv" # Windows-style relative path, note the `\\`
 
 # # Empleo la libreria time para medir tiempo de ejecucion, pandas para sacar datos en un archivo csv
 import time
@@ -144,7 +144,7 @@ def greedy(charMap, init):
     # ## `nodes` contendrá los nodos del grafo
 
     nodes = []
-
+    node_stack = [] #es una pila que me permitirá volver hacia atrás
     # ## Añadimos el primer nodo a `nodes`
 
     nodes.append(init)
@@ -176,7 +176,7 @@ def greedy(charMap, init):
         #Creo una función que pueda calcular la distancia hasta la meta
         def distancia(movimiento):
             return abs(movimiento[0] - END_X) + abs(movimiento[1] - END_Y)
-
+        
         #A partir de la distancia a la meta ordenamos los movimientos
         movimientos_disponibles.sort(key=distancia)
 
@@ -188,27 +188,34 @@ def greedy(charMap, init):
         #El siguiente bucle va probando los movimientos según el orden de la lista
         for movimiento in movimientos_disponibles:
             tmpX, tmpY = movimiento
-            if( charMap[tmpX][tmpY] == '4' ):
+            if( charMap[tmpX][tmpY] == '4' ): # Encuentro la meta
                 print("GOALLLL!!!")
                 goalParentId = node.myId  # aquí sustituye por real
                 fin = time.time() # finalizo el contador
                 duracion = fin - inicio # calculo el tiempo transcurrido en la ejecucion 
                 done = True
                 break
-            elif ( charMap[tmpX][tmpY] == '0' ):
+            elif ( charMap[tmpX][tmpY] == '0' ): # Encuentro nodo sin visitar
                 print("mark visited")
+                oldNode = newNode #almaceno el nodo anterior
                 newNode = Node(tmpX, tmpY, len(nodes), node.myId)
                 charMap[tmpX][tmpY] = '2'
                 nodes.append(newNode)
+                if (oldNode.parentId != -2):
+                    node_stack.append(oldNode.parentId) #Actualizo el valor de la pila con el nodo que visito (guardo parentId)
                 break
-            elif ( charMap[tmpX][tmpY] == '2'): # cuando ya hemos pasado por la celda debemos aumentar el contador
+            elif ( charMap[tmpX][tmpY] == '2' or  charMap[tmpX][tmpY] == '1'): # cuando ya hemos pasado por la celda debemos aumentar el contador
                 print("Casilla visitada")
-                direccion_bloqueada += 1
-                if (direccion_bloqueada == 8): # si ya hemos pasado por todas las celdas de alrededor debemos volver al punto anterior
-                    for a in nodes:
-                        if ( a.myId == node.parentId ): # cuando el ID del nodo coincide con el parentID, hemos encontrado el anterior
-                            newNode = a
-                            break             
+                direccion_bloqueada += 1 #Aumento el contador de direcciones no posibles
+                if (direccion_bloqueada == 8): #En el momento que el contador llega a 8, tenemos que volver atras dado que no hay moviemiento posible
+                    if node_stack :
+                        prev_node_id = node_stack.pop() #Extraigo el parentId del último nodo visitado
+                        prev_node = nodes[prev_node_id] #busco ese nodo en la lista nodes que contiene todos
+                        newNode = prev_node #asigno a mi nuevo nodo el nodo anterior, de modo que me muevo hacia atrás
+                    else:
+                        print("No hay path posible") #En eo caso que no queden nodos disponibles, se indicará que no hay camino posible
+                        done = True
+                        break
         dumpMap()  
 
     # ## Display solución hallada
@@ -218,7 +225,7 @@ def greedy(charMap, init):
     mapa = mapa.replace('4', 'G') # La meta la señalizo con G (goal)
     output_csv = "mapa_resultado_greedy.csv"  # Nombre del archivo CSV de salida
     
-    nodos_visitados = []
+    nodos_visitados = [] # creo una lista con los nodos que voy a recorrer para enviarlo al excel
 
     print("%%%%%%%%%%%%%%%%%%%")
     ok = False
@@ -226,32 +233,31 @@ def greedy(charMap, init):
         for node in nodes:
             if( node.myId == goalParentId ):
                 node.dump()
-                nodos_visitados.append([node.x, node.y, node.myId, node.parentId])
-                mapa.at[node.x, node.y] = node.myId
+                nodos_visitados.append([node.x, node.y, node.myId, node.parentId])  # Relleno la lista con x, y, ID, parentId                 
+                mapa.at[node.x, node.y] = node.myId # Relleno el mapa con los nodos que voy a recorrer, de modo que tengo un csv con las celdas visitadas numeradas
                 goalParentId = node.parentId
-
                 if( goalParentId == -2):
                     print("%%%%%%%%%%%%%%%%%")
                     ok = True
 
     # Crear un DataFrame con los datos
-    nodos_visitados.reverse()
+    nodos_visitados.reverse() #Invierto el orden de la lista con los nodos que voy a recorrer
     data_nodos = {
-        "X": [var[0] for var in nodos_visitados],
+        "X": [var[0] for var in nodos_visitados], # Guardo en data_nodos los valores separados en cuatro columnas
         "Y": [var[1] for var in nodos_visitados],
         "ID": [var[2] for var in nodos_visitados],
         "ParentID": [var[3] for var in nodos_visitados]
     }
 
-    df_nodos = pd.DataFrame(data_nodos)
+    df_nodos = pd.DataFrame(data_nodos) # Genero el data frame que se envía al archivo excel
     # Especifica la ruta del archivo Excel de salida
     excel_file = "AlgoritmosBusqueda.xlsx"
 
     # Guarda el DataFrame en un archivo Excel
-    df_nodos.to_excel(excel_file, index=False)
+    df_nodos.to_excel(excel_file, index=False) # Envío el dataframe al archivo excel especificado
 
     # Guarda el DataFrame en un archivo CSV
-    mapa.to_csv(output_csv, index=False, header=False)
+    mapa.to_csv(output_csv, index=False, header=False) # Guardo el mapa en csv
     print("Mapa final guardado en", output_csv)  
 
     # ## Devuelvo el valor del tiempo transcurrido
@@ -362,9 +368,7 @@ def bfs(charMap, init):
     # ## Devuelvo el valor del tiempo transcurrido
     return duracion
 
-
 duracion_bfs = bfs(charMap, init)
 duracion_greedy = greedy(charMap, init)
-
 print(f"El tiempo con funcion bfs es de: {duracion_bfs:.3f} segundos\n")
 print(f"El tiempo con funcion greedy es de: {duracion_greedy:.3f} segundos\n")
