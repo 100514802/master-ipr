@@ -30,14 +30,61 @@ Nós
 
 # # Initial values are hard-coded (A nivel mapa)
 
+# # Empleo las siguientes librerias
+import time
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import numpy as np
+import subprocess
+import os
+
+# # Mapas disponibles, sustituir la ruta por la correspondiente en su equipo
 #FILE_NAME = "/usr/local/share/master-ipr/map1/map1.csv" # Linux-style absolute path
 #FILE_NAME = "C:\\Users\\USER_NAME\\Downloads\\master-ipr\\map1\\map1.csv" # Windows-style absolute path, note the `\\` and edit `USER_NAME`
 #FILE_NAME = "../../../../map1/map1.csv" # Linux-style relative path
-FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map5\\map5.csv" # Windows-style relative path, note the `\\`
+#FILE_NAME = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map5\\map5.csv" # Windows-style relative path, note the `\\`
 
-# # Empleo la libreria time para medir tiempo de ejecucion, pandas para sacar datos en un archivo csv
-import time
-import pandas as pd
+# Almaceno las direcciones de cada mapa en un diccionario para tratar de automatizar su seleccion
+available_maps = {
+    'map1': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map1\\',
+    'map2': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map2\\',
+    'map3': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map3\\',
+    'map4': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map4\\',
+    'map5': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map5\\',
+    'map6': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map6\\',
+    'map7': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map7\\',
+    'map8': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map8\\',
+    'map9': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map9\\',
+    'map10': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map10\\',
+    'map11': 'C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\map11\\'
+}
+
+# Solicito al usuario que elija un mapa
+print("Seleccione un mapa: ")
+for i, map_name in enumerate(available_maps.keys(), 1): #Bucle que recorre el diccionario para mostrar los mapas disponibles por terminal y las enumera
+    print(f"{i}. {map_name}")
+
+while True:
+    try:
+        choice = int(input("Ingresa el número del mapa deseado: ")) # Peticion por terminal
+        if 1 <= choice <= len(available_maps): # Compruebo si el valor introducido es correcto, sino vuelvo a pedir
+            break
+        else:
+            print("Número fuera de rango. Por favor, ingresa un número válido.")
+    except ValueError:
+        print("Entrada inválida. Por favor, ingresa un número.")
+
+# Construir FILE_NAME basado en la elección del usuario
+selected_map = list(available_maps.keys())[choice - 1]
+file_name = available_maps[selected_map]
+
+# FILE_NAME es la ruta completa del archivo CSV del mapa seleccionado
+FILE_NAME = os.path.join(file_name, f"{selected_map}.csv")
+
+# EXCEL_PATH es la ruta donde se ha creado el excel, coincide con la carpeta donde tenemos el readme.md (por defecto)
+EXCEL_PATH = "C:\\Users\\quiqu\\Desktop\\Master\\Introducción a la planificación de robots\\Practica\\master-ipr\\AlgoritmosBusqueda.xlsx" #Sustituir la ruta por la correspondiente en cada caso
+
 
 # # Define Node class (A nivel grafo/nodo)
 
@@ -218,7 +265,6 @@ def greedy(charMap, init):
                         break
         dumpMap()  
 
-    # ## Display solución hallada
     # Convierte charMap en un DataFrame de pandas
     mapa = pd.DataFrame(charMap)
     mapa = mapa.replace('1', 'X') # Sustituyo los muros por una X, asi no hay confusión entre un muro y el primer nodo visitado
@@ -248,20 +294,14 @@ def greedy(charMap, init):
         "ID": [var[2] for var in nodos_visitados],
         "ParentID": [var[3] for var in nodos_visitados]
     }
-
-    df_nodos = pd.DataFrame(data_nodos) # Genero el data frame que se envía al archivo excel
-    # Especifica la ruta del archivo Excel de salida
-    excel_file = "AlgoritmosBusqueda.xlsx"
-
-    # Guarda el DataFrame en un archivo Excel
-    df_nodos.to_excel(excel_file, index=False) # Envío el dataframe al archivo excel especificado
-
+    df_nodos_greedy = pd.DataFrame(data_nodos) # Genero el data frame que se envía al archivo excel
+    
     # Guarda el DataFrame en un archivo CSV
     mapa.to_csv(output_csv, index=False, header=False) # Guardo el mapa en csv
     print("Mapa final guardado en", output_csv)  
 
     # ## Devuelvo el valor del tiempo transcurrido
-    return duracion
+    return duracion, df_nodos_greedy, len(nodes)
 
 def bfs(charMap, init):
     # ## Empieza algoritmo
@@ -354,21 +394,51 @@ def bfs(charMap, init):
             dumpMap()
 
     # ## Display solución hallada 
+    nodos_visitados = [] # creo una lista con los nodos que voy a recorrer para enviarlo al excel
+
     print("%%%%%%%%%%%%%%%%%%%")
     ok = False
     while not ok:
         for node in nodes:
             if( node.myId == goalParentId ):
                 node.dump()
+                nodos_visitados.append([node.x, node.y, node.myId, node.parentId])  # Relleno la lista con x, y, ID, parentId                 
                 goalParentId = node.parentId
                 if( goalParentId == -2):
                     print("%%%%%%%%%%%%%%%%%")
                     ok = True
+    
+    # Crear un DataFrame con los datos
+    nodos_visitados.reverse() #Invierto el orden de la lista con los nodos que voy a recorrer
+    data_nodos = {
+        "X": [var[0] for var in nodos_visitados], # Guardo en data_nodos los valores separados en cuatro columnas
+        "Y": [var[1] for var in nodos_visitados],
+        "ID": [var[2] for var in nodos_visitados],
+        "ParentID": [var[3] for var in nodos_visitados]
+    }
+    df_nodos_bfs = pd.DataFrame(data_nodos) # Genero el data frame que se envía al archivo excel
+   
+    
+    # Devuelvo el valor del tiempo transcurrido
+    return duracion, df_nodos_bfs, len(nodes)
 
-    # ## Devuelvo el valor del tiempo transcurrido
-    return duracion
+duracion_bfs, df_nodos_bfs, nodos_visitados_bfs = bfs(charMap, init)
+duracion_greedy, df_nodos_greedy, nodos_visitados_greedy = greedy(charMap, init)
 
-duracion_bfs = bfs(charMap, init)
-duracion_greedy = greedy(charMap, init)
+df_long_path_bfs = pd.DataFrame({"Nodos visitados": [nodos_visitados_bfs]})
+df_duracion_bfs = pd.DataFrame({"Time": [duracion_bfs]})
+df_bfs = pd.concat([df_nodos_bfs, df_long_path_bfs, df_duracion_bfs], ignore_index=False, axis=1)
+
+df_long_path_greedy = pd.DataFrame({"Nodos visitados": [nodos_visitados_greedy]})
+df_duracion_greedy = pd.DataFrame({"Time": [duracion_greedy]})
+df_greedy = pd.concat([df_nodos_greedy, df_long_path_greedy, df_duracion_greedy], ignore_index=False, axis=1)
+
+# Especifica la ruta del archivo Excel de salida
+with pd.ExcelWriter('AlgoritmosBusqueda.xlsx') as writer:
+    df_bfs.to_excel(writer, sheet_name="bfs", index=False) # Envío el dataframe al archivo excel especificado
+    df_greedy.to_excel(writer, sheet_name="greedy", index=False) # Envío el dataframe al archivo excel especificado
+
 print(f"El tiempo con funcion bfs es de: {duracion_bfs:.3f} segundos\n")
 print(f"El tiempo con funcion greedy es de: {duracion_greedy:.3f} segundos\n")
+# abre el archivo excel de manera automatica
+subprocess.Popen(['start', 'excel', EXCEL_PATH], shell=True)
