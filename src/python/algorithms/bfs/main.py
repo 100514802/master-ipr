@@ -33,9 +33,9 @@ Nós
 # # Empleo las siguientes librerias
 import time
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import numpy as np
+#import matplotlib.pyplot as plt
+#from matplotlib.animation import FuncAnimation
+#import numpy as np
 import subprocess
 import os
 
@@ -220,7 +220,7 @@ def greedy(charMap, init):
         (node.x + 1, node.y + 1) # Diagonal inf dcha
         ]
 
-        #Creo una función que pueda calcular la distancia hasta la meta
+        #Creo una función que pueda calcular la distancia manhattan hasta la meta
         def distancia(movimiento):
             return abs(movimiento[0] - END_X) + abs(movimiento[1] - END_Y)
         
@@ -425,6 +425,7 @@ def bfs(charMap, init):
 duracion_bfs, df_nodos_bfs, nodos_visitados_bfs = bfs(charMap, init)
 duracion_greedy, df_nodos_greedy, nodos_visitados_greedy = greedy(charMap, init)
 
+# Creo los dataframe correspondientes para cargarlos en el excel
 df_long_path_bfs = pd.DataFrame({"Nodos visitados": [nodos_visitados_bfs]})
 df_duracion_bfs = pd.DataFrame({"Time": [duracion_bfs]})
 df_bfs = pd.concat([df_nodos_bfs, df_long_path_bfs, df_duracion_bfs], ignore_index=False, axis=1)
